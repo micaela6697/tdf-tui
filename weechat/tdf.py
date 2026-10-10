@@ -37,6 +37,12 @@ OPTIONS = {
         "key that closes the popup, e.g. meta-f; empty: the key bound to /tdf "
         "(so it toggles the popup); none: disabled",
     ),
+    "art_colors": (
+        "on",
+        "show ANSI art lines with exact terminal colors: light colors stay "
+        "real bright colors instead of bold (weechat.look.color_basic_force_bold) "
+        "and white is real white, without changing other messages",
+    ),
     "prefix_reserve": (
         "100",
         "bytes reserved for the :nick!user@host prefix the server adds, "
@@ -61,6 +67,60 @@ def opt(name):
 
 def error(buffer, msg):
     weechat.prnt(buffer, "%s%s: %s" % (weechat.prefix("error"), SCRIPT_NAME, msg))
+
+
+# WeeChat basic color number -> terminal palette color, for art lines.
+# Order: default, black, darkgray, red, lightred, green, lightgreen, brown,
+# yellow, blue, lightblue, magenta, lightmagenta, cyan, lightcyan, gray, white.
+BASIC_TO_TERM = [None, 0, 8, 1, 9, 2, 10, 3, 11, 4, 12, 5, 13, 6, 14, 7, 15]
+
+# WeeChat color codes in a displayed line: fg (\x19F), bg (\x19B), or
+# fg+bg (\x19*), each color either basic ("14") or extended ("@00014").
+ATTRS = r"[*!/_|%.]*"
+COLOR = r"(?:@\d{5}|\d\d)"
+COLOR_CODE = re.compile(
+    r"\x19(?:F(" + ATTRS + r")(" + COLOR + r")"
+    r"|B(" + COLOR + r")"
+    r"|\*(" + ATTRS + r")(" + COLOR + r")(?:([,~])(" + COLOR + r"))?)"
+)
+ART_CHAR = re.compile("[\u2500-\u259f]")  # box drawing and block elements
+
+
+def extended(color, attrs=""):
+    """Color with its attributes, basic colors made extended: ("14", "|") ->
+    "@|00014" (WeeChat puts attributes after the "@"). Extended and default
+    colors are returned unchanged."""
+    if color.startswith("@"):
+        return attrs + color
+    n = int(color)
+    if n >= len(BASIC_TO_TERM) or BASIC_TO_TERM[n] is None:
+        return attrs + color
+    return "@%s%05d" % (attrs, BASIC_TO_TERM[n])
+
+
+def to_extended_colors(message):
+    def sub(m):
+        if m.group(2) is not None:
+            return "\x19F" + extended(m.group(2), m.group(1))
+        if m.group(3) is not None:
+            return "\x19B" + extended(m.group(3))
+        code = "\x19*" + extended(m.group(5), m.group(4))
+        if m.group(7) is not None:
+            code += m.group(6) + extended(m.group(7))
+        return code
+    return COLOR_CODE.sub(sub, message)
+
+
+def art_colors_cb(data, modifier, modifier_data, string):
+    """Give ANSI art lines exact colors, unaffected by force_bold."""
+    if opt("art_colors") != "on" or "\x19" not in string:
+        return string
+    prefix, sep, message = string.partition("\t")
+    if not sep:
+        prefix, message = "", string
+    if len(ART_CHAR.findall(message)) < 3:
+        return string
+    return prefix + sep + to_extended_colors(message)
 
 
 def own_prefix_len(server, channel):
@@ -231,6 +291,7 @@ if weechat.register(SCRIPT_NAME, SCRIPT_AUTHOR, SCRIPT_VERSION, SCRIPT_LICENSE,
         if not weechat.config_is_set_plugin(name):
             weechat.config_set_plugin(name, default)
         weechat.config_set_desc_plugin(name, desc)
+    weechat.hook_modifier("weechat_print", "art_colors_cb", "")
     weechat.hook_command(
         "tdf",
         SCRIPT_DESC,

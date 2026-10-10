@@ -154,4 +154,18 @@ WeeChat's anti-flood setting paces them.
 | `popup_width` | `95%` | tmux popup width |
 | `popup_height` | `90%` | tmux popup height |
 | `close_key` | | Key that closes the popup; empty: the key bound to `/tdf`; `none`: disabled |
+| `art_colors` | `on` | Show ANSI art lines with exact terminal colors (see below) |
 | `prefix_reserve` | `100` | Bytes assumed for your `:nick!user@host` prefix when it can't be looked up (e.g. in queries) |
+
+### Exact colors for ANSI art
+
+With `weechat.look.color_basic_force_bold` on, WeeChat draws light colors as
+the normal color in bold, so light cyan shading over a cyan background turns
+into solid cyan. With `weechat.look.color_real_white` off, white is drawn in
+the terminal's default color.
+
+To keep those settings for normal chat, the plugin rewrites the colors of
+lines that look like ANSI art (three or more block or box-drawing characters)
+from WeeChat's basic colors to the same colors by palette number, which those
+settings don't touch. This applies to art from anyone, not just your own.
+Turn it off with `/set plugins.var.python.tdf.art_colors off`.
