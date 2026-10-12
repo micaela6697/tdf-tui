@@ -136,11 +136,14 @@ ln -s "$PWD/weechat/tdf.py" ~/.local/share/weechat/python/autoload/
 - The list starts filtered to fonts that have the text's digits and
   punctuation (`g` changes or clears it).
 
-The plugin works out the byte limit for each line from your nick, host and
-the target: an IRC message is at most 512 bytes including the
-`:nick!user@host` prefix the server adds. Lines are sent through WeeChat's
-normal IRC input path (`irc_input_send`), so leading spaces are kept and
-WeeChat's anti-flood setting paces them.
+The plugin works out the byte limit for each line: an IRC message is at most
+512 bytes including the `:nick!user@host` prefix the server adds. By default
+it assumes the longest possible prefix (63-byte host, 12-byte user name), as
+bouncers like soju do when they split long lines; a line between that and
+your real limit would otherwise be cut in two by the bouncer, the second half
+losing its colors. Lines are sent through WeeChat's normal IRC input path
+(`irc_input_send`), so leading spaces are kept and WeeChat's anti-flood
+setting paces them.
 
 ### Options
 
@@ -154,8 +157,9 @@ WeeChat's anti-flood setting paces them.
 | `popup_width` | `95%` | tmux popup width |
 | `popup_height` | `90%` | tmux popup height |
 | `close_key` | | Key that closes the popup; empty: the key bound to `/tdf`; `none`: disabled |
+| `real_host` | `off` | `on`: size lines for your actual host instead of the longest possible one (a little more room, only safe without a bouncer) |
 | `art_colors` | `on` | Show ANSI art lines with exact terminal colors (see below) |
-| `prefix_reserve` | `100` | Bytes assumed for your `:nick!user@host` prefix when it can't be looked up (e.g. in queries) |
+| `prefix_reserve` | `100` | With `real_host` on: bytes assumed for your `:nick!user@host` prefix when it can't be looked up (e.g. in queries) |
 
 ### Exact colors for ANSI art
 

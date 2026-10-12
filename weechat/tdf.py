@@ -43,10 +43,17 @@ OPTIONS = {
         "real bright colors instead of bold (weechat.look.color_basic_force_bold) "
         "and white is real white, without changing other messages",
     ),
+    "real_host": (
+        "off",
+        "off: size lines for the longest possible :nick!user@host prefix "
+        "(63-byte host, 12-byte user), which bouncers like soju assume when "
+        "they split long lines; on: size them for your actual host, for a "
+        "little more room on a direct connection",
+    ),
     "prefix_reserve": (
         "100",
-        "bytes reserved for the :nick!user@host prefix the server adds, "
-        "used when your host can't be looked up (e.g. in queries)",
+        "with real_host on: bytes reserved for the :nick!user@host prefix "
+        "when your host can't be looked up (e.g. in queries)",
     ),
 }
 
@@ -123,9 +130,16 @@ def art_colors_cb(data, modifier, modifier_data, string):
     return prefix + sep + to_extended_colors(message)
 
 
+# Longest user name and host an IRC prefix can have, as bouncers assume.
+MAX_USER, MAX_HOST = 12, 63
+
+
 def own_prefix_len(server, channel):
-    """Byte length of ':nick!user@host ' as the server will relay it."""
+    """Byte length of ':nick!user@host ' as the server will relay it: the
+    longest possible one unless real_host is on."""
     nick = weechat.info_get("irc_nick", server)
+    if opt("real_host") != "on":
+        return len((":%s!%s@%s " % (nick, "u" * MAX_USER, "h" * MAX_HOST)).encode("utf-8"))
     host = ""
     infolist = weechat.infolist_get("irc_nick", "", "%s,%s,%s" % (server, channel, nick))
     if infolist:
