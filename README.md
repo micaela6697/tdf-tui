@@ -8,8 +8,16 @@ font in a tmux popup and send the banner straight to a channel.
 ## Build
 
 ```sh
-go build -o tdfbrowse .
+make            # or: go build -o tdfbrowse .
+make test       # go vet + tests
+make install    # tdfbrowse to ~/.local/bin, the WeeChat script to WeeChat's home
+make uninstall
 ```
+
+`PREFIX` and `WEECHAT_DIR` override where `make install` puts things.
+WeeChat's home defaults to `~/.weechat` if it exists, else
+`~/.local/share/weechat`, the same rule WeeChat follows. `tdfbrowse -version`
+prints the version (`git describe`) it was built from.
 
 Needs Go 1.27+. The only dependency is [tcell](https://github.com/gdamore/tcell).
 
@@ -117,15 +125,18 @@ running inside tmux 3.2 or newer.
 ### Setup
 
 ```sh
-ln -s "$PWD/weechat/tdf.py" ~/.local/share/weechat/python/autoload/
+make install
 ```
 
 ```
 /script load tdf.py
 /set plugins.var.python.tdf.font_dir ~/path/to/THEDRAWFONTS
-/set plugins.var.python.tdf.tdfbrowse ~/path/to/tdfbrowse
+/set plugins.var.python.tdf.tdfbrowse ~/.local/bin/tdfbrowse
 /key bind meta-f /tdf
 ```
+
+After updating, `make install` and `/script reload tdf.py`; a new binary alone
+needs no reload, since each `/tdf` starts it fresh.
 
 ### Use
 

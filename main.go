@@ -670,7 +670,11 @@ func (a *App) handleKey(ev *tcell.EventKey) bool {
 	return true
 }
 
+// version is set at build time: go build -ldflags "-X main.version=...".
+var version = "dev"
+
 func main() {
+	showVersion := flag.Bool("version", false, "print the version and exit")
 	irc := flag.Bool("irc", false, "IRC mode: Enter prints the preview as mIRC-colored lines on stdout and exits\n(Esc/q exit 1 without output)")
 	width := flag.Int("width", 0, "wrap width in columns (0 = window width)")
 	maxBytes := flag.Int("max-bytes", 400, "IRC mode: longest line allowed, in bytes")
@@ -682,6 +686,10 @@ func main() {
 		flag.PrintDefaults()
 	}
 	flag.Parse()
+	if *showVersion {
+		fmt.Println("tdfbrowse", version)
+		return
+	}
 	ck, err := parseCloseKey(*closeKeyName)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
