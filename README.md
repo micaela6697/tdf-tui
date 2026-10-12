@@ -152,7 +152,10 @@ The plugin works out the byte limit for each line: an IRC message is at most
 it assumes the longest possible prefix (63-byte host, 12-byte user name), as
 bouncers like soju do when they split long lines; a line between that and
 your real limit would otherwise be cut in two by the bouncer, the second half
-losing its colors. Lines are sent through WeeChat's normal IRC input path
+losing its colors. WeeChat also splits long messages by its own reckoning
+(`irc.server.*.split_msg_max_length` and its estimate of the prefix), so the
+limit is lowered to what WeeChat sends whole, and each line is checked again
+before sending: a banner that would be split isn't sent. Lines are sent through WeeChat's normal IRC input path
 (`irc_input_send`), so leading spaces are kept and WeeChat's anti-flood
 setting paces them.
 

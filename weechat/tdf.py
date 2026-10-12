@@ -154,6 +154,29 @@ def own_prefix_len(server, channel):
     return len((":%s!%s " % (nick, host)).encode("utf-8"))
 
 
+def weechat_splits(server, target, text):
+    """Whether WeeChat would split this message to target into several."""
+    parts = weechat.info_get_hashtable(
+        "irc_message_split",
+        {"server": server, "message": "PRIVMSG %s :%s" % (target, text)},
+    )
+    return int((parts or {}).get("count") or 1) > 1
+
+
+def weechat_line_limit(server, target, upper):
+    """Longest message text in bytes, up to upper, that WeeChat sends to
+    target without splitting it (irc.server.*.split_msg_max_length and its
+    own estimate of the :nick!user@host prefix)."""
+    lo, hi = 0, upper
+    while lo < hi:  # largest n in [0, upper] that isn't split
+        mid = (lo + hi + 1) // 2
+        if weechat_splits(server, target, "x" * mid):
+            hi = mid - 1
+        else:
+            lo = mid
+    return lo
+
+
 def close_key():
     """Key tdfbrowse should treat as cancel: the option, else the /tdf binding."""
     key = opt("close_key").strip()
@@ -210,6 +233,10 @@ def tdf_cmd_cb(data, buffer, args):
         - len(("PRIVMSG %s :" % target).encode("utf-8"))
         - own_prefix_len(server, target)
     )
+    # WeeChat splits long messages by its own reckoning, which can be
+    # stricter; a split row would arrive as two messages, the second
+    # uncolored, so never go past it.
+    max_bytes = weechat_line_limit(server, target, max_bytes)
     if max_bytes < 50:
         error(buffer, "not enough room in an IRC line (%d bytes)" % max_bytes)
         return weechat.WEECHAT_RC_OK
@@ -285,6 +312,12 @@ def tdf_done_cb(data, command, rc, out, err):
         error("", "%s is no longer open; banner not sent" % job["target"])
         return weechat.WEECHAT_RC_OK
 
+    # Last check, in case the target or settings changed while picking.
+    for i, line in enumerate(lines):
+        if weechat_splits(job["server"], job["target"], line):
+            error(buffer, "line %d of the banner would be split by WeeChat; "
+                  "not sent (try a smaller font or width)" % (i + 1))
+            return weechat.WEECHAT_RC_OK
     for line in lines:
         if not line.strip():
             line = BLANK_LINE
